@@ -1,38 +1,38 @@
-# Health-AI-inspection-system
+# 教室卫生 AI 智能巡查系统（Health-AI-inspection-system）
 
-Classroom cleaning inspection backend: **WeChat mini-program → Java backend → Alibaba Cloud Vision AI**.
+教室卫生巡查后端：**微信小程序 → Java 后端 → 阿里云视觉智能 API**。
 
-## Architecture
+## 一、系统架构
 
-- Mini-program only uploads photos
-- Java backend authenticates the uploader and calls the AI
-- AI returns `pass` or `review`
-- Teachers only handle `review` cases
-- Photos are auto-purged from local disk after 7 days (DB records are kept)
+- 小程序只负责拍照上传
+- Java 后端负责鉴权 + 调用 AI
+- AI 输出 `pass`（合格）或 `review`（待复核）
+- 老师只处理 `review` 的记录
+- 图片在本地磁盘保留 7 天，到期自动清理（数据库记录保留，便于统计）
 
-## Modules
+## 二、模块说明
 
-| Path | Purpose |
-|------|---------|
-| `web/CleaningController` | REST endpoints |
-| `service/CleaningService` | Orchestration |
-| `ai/AliyunVisionService` | Alibaba Cloud objectdet integration (mockable) |
-| `ai/CleaningRuleEngine` | Lenient pass/review rules |
-| `storage/PhotoStorage` | Save photos under `data/cleaning/YYYY/MM/DD/uuid.jpg` |
-| `storage/PhotoCleanupJob` | Daily 03:00 cron to delete files older than 7 days |
-| `domain/CleaningRecord` | JPA entity for the inspection record |
+| 路径 | 作用 |
+|------|------|
+| `web/CleaningController` | REST 接口 |
+| `service/CleaningService` | 业务编排 |
+| `ai/AliyunVisionService` | 阿里云目标检测调用（可 mock） |
+| `ai/CleaningRuleEngine` | 宽松版的合格/复核判定规则 |
+| `storage/PhotoStorage` | 图片落盘到 `data/cleaning/YYYY/MM/DD/uuid.jpg` |
+| `storage/PhotoCleanupJob` | 每日 03:00 定时清理 7 天前的图片 |
+| `domain/CleaningRecord` | 卫生巡查记录的 JPA 实体 |
 
-## REST endpoints
+## 三、接口设计
 
-| Method | Path | Role | Description |
-|--------|------|------|-------------|
-| POST | `/api/cleaning/check` | student | Upload photo, classroom ID; returns `pass` / `review` + `record_id` |
-| GET | `/api/cleaning/review/list` | teacher | List records awaiting review |
-| POST | `/api/cleaning/review/submit` | teacher | Submit `pass` / `fail` for a `record_id` |
+| 方法 | 路径 | 角色 | 说明 |
+|------|------|------|------|
+| POST | `/api/cleaning/check` | 学生 | 上传图片 + 教室ID，返回 `pass` / `review` + `record_id` |
+| GET | `/api/cleaning/review/list` | 老师 | 查询待复核的记录列表 |
+| POST | `/api/cleaning/review/submit` | 老师 | 对 `record_id` 提交 `pass` / `fail` 的复核结果 |
 
-Role + user id are sent in the `X-User-Role` and `X-User-Id` headers; swap this for JWT auth in production.
+请求头 `X-User-Role` 与 `X-User-Id` 用于传递角色和用户ID；生产环境请替换为 JWT 鉴权。
 
-### Sample request
+### 调用示例
 
 ```bash
 curl -X POST http://localhost:8080/api/cleaning/check \
@@ -40,50 +40,60 @@ curl -X POST http://localhost:8080/api/cleaning/check \
   -F "photo=@classroom.jpg" -F "classroomId=A101"
 ```
 
+返回示例：
+
 ```json
 { "result": "review", "reason": "floor_big_trash, desk_ok, podium_ok, bin_ok", "record_id": "1" }
 ```
 
-## Configuration
+## 四、AI 判定规则（宽松版）
 
-`src/main/resources/application.yml`:
+- 地面出现**明显大件垃圾** → `review`
+- 桌面出现**成片垃圾/饮料瓶** → `review`
+- 讲台**明显堆积** → `review`
+- 垃圾桶**溢出** → `review`
+- 其余情况 → `pass`
 
-- `cleaning.storage-root` — root folder for uploaded photos (default `./data/cleaning`)
-- `cleaning.retention-days` — retention period in days (default `7`)
-- `aliyun.access-key-id` / `aliyun.access-key-secret` — Alibaba Cloud credentials (env vars `ALIYUN_ACCESS_KEY_ID` / `ALIYUN_ACCESS_KEY_SECRET`)
-- `aliyun.mock` — when `true` (default) the AI client returns an empty detection so the app boots without credentials
+## 五、配置说明
 
-## Database
+配置文件：`src/main/resources/application.yml`
 
-Defaults to file-based H2 for development. The `cleaning_record` table:
+- `cleaning.storage-root`：图片落盘根目录，默认 `./data/cleaning`
+- `cleaning.retention-days`：图片保留天数，默认 `7`
+- `aliyun.access-key-id` / `aliyun.access-key-secret`：阿里云 AccessKey，可用环境变量 `ALIYUN_ACCESS_KEY_ID` / `ALIYUN_ACCESS_KEY_SECRET`
+- `aliyun.mock`：默认 `true`，本地开发时跳过真实 AI 调用，返回空检测结果
 
-| Column | Notes |
-|--------|-------|
-| `id` | PK |
-| `classroom_id`, `uploader_id` | who/where |
-| `photo_path` | absolute path on disk (file may be purged after 7 days) |
+## 六、数据库表结构
+
+默认使用文件 H2，便于本地开发。核心表 `cleaning_record`：
+
+| 字段 | 说明 |
+|------|------|
+| `id` | 主键 |
+| `classroom_id`、`uploader_id` | 教室 / 上传人 |
+| `photo_path` | 图片磁盘路径（7 天后文件被清理，记录保留） |
 | `ai_result` | `pass` / `review` |
-| `ai_detail` | reasons string |
-| `reviewer_id`, `final_result`, `reviewed_at` | populated after teacher review |
-| `created_at` | upload timestamp |
+| `ai_detail` | 判定原因文本 |
+| `reviewer_id`、`final_result`、`reviewed_at` | 老师复核后写入 |
+| `created_at` | 上传时间 |
 
-For MySQL, override `spring.datasource.*` and `spring.jpa.properties.hibernate.dialect`.
+切换 MySQL：修改 `spring.datasource.*` 与 `spring.jpa.properties.hibernate.dialect`。
 
-## Build & run
+## 七、构建与运行
 
 ```bash
-mvn spring-boot:run
-mvn test
+mvn spring-boot:run    # 启动后端
+mvn test               # 跑单元测试
 ```
 
-## Roles
+## 八、角色权限
 
-- **Student** — upload photos via `/api/cleaning/check`
-- **Teacher** — review flagged records via `/api/cleaning/review/*`
-- **Admin** — statistics (future work)
+- **学生**：通过 `/api/cleaning/check` 上传照片
+- **老师**：通过 `/api/cleaning/review/*` 处理待复核记录
+- **管理员**：统计报表（后续迭代）
 
-## Roadmap
+## 九、开发周期
 
-- Week 1: upload + storage + AI integration ✅
-- Week 2: teacher review + cleanup job ✅
-- Week 3: statistics dashboard (optional)
+- 第 1 周：上传 + 存储 + AI 接口 ✅
+- 第 2 周：老师复核 + 7 天清理任务 ✅
+- 第 3 周：统计报表（可选）

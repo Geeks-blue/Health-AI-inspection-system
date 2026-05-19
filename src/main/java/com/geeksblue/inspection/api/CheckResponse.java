@@ -1,12 +1,17 @@
 package com.geeksblue.inspection.api;
 
 /**
- * Response for POST /api/cleaning/check.
+ * POST /api/cleaning/check 接口的返回体。
  */
 public class CheckResponse {
 
+    /** 判定结果：pass / review */
     private String result;
+
+    /** 判定原因（人类可读） */
     private String reason;
+
+    /** 记录主键，字符串形式，便于前端处理 */
     private String recordId;
 
     public CheckResponse() {}

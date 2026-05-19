@@ -16,6 +16,15 @@ import java.util.List;
 
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 
+/**
+ * 卫生巡查 REST 控制器。
+ *
+ * <p>请求头约定：
+ * <ul>
+ *   <li>{@code X-User-Id}：用户 ID</li>
+ *   <li>{@code X-User-Role}：STUDENT / TEACHER / ADMIN</li>
+ * </ul>
+ */
 @RestController
 @RequestMapping("/api/cleaning")
 public class CleaningController {
@@ -26,21 +35,22 @@ public class CleaningController {
         this.service = service;
     }
 
-    /** Student uploads a classroom photo for automated AI judgement. */
+    /** 学生：上传教室照片，AI 自动判定 */
     @PostMapping(path = "/check", consumes = "multipart/form-data")
     public CheckResponse check(@RequestPart("photo") MultipartFile photo,
                                @RequestParam("classroomId") String classroomId,
                                @RequestHeader(value = "X-User-Id", defaultValue = "anonymous") String uploaderId,
                                @RequestHeader(value = "X-User-Role", required = false) String roleHeader)
             throws IOException {
+        // 任意已登录角色都可上传，但匿名/未识别角色被拒绝
         Role role = Role.parse(roleHeader);
         if (role != Role.STUDENT && role != Role.TEACHER && role != Role.ADMIN) {
-            throw new ResponseStatusException(FORBIDDEN, "upload requires an authenticated user");
+            throw new ResponseStatusException(FORBIDDEN, "上传需要已登录的用户");
         }
         return service.check(photo, classroomId, uploaderId);
     }
 
-    /** Teacher fetches the list of records flagged by AI as needing review. */
+    /** 老师：拉取待复核的记录列表 */
     @GetMapping("/review/list")
     public List<ReviewItem> reviewList(
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
@@ -48,7 +58,7 @@ public class CleaningController {
         return service.pendingReviews();
     }
 
-    /** Teacher confirms or overturns the AI judgement. */
+    /** 老师：提交复核结果（pass / fail） */
     @PostMapping("/review/submit")
     public ResponseEntity<Void> reviewSubmit(
             @Valid @RequestBody ReviewSubmitRequest request,
@@ -59,10 +69,11 @@ public class CleaningController {
         return ResponseEntity.noContent().build();
     }
 
+    /** 仅老师 / 管理员可访问复核接口 */
     private void requireTeacherOrAdmin(String roleHeader) {
         Role role = Role.parse(roleHeader);
         if (role != Role.TEACHER && role != Role.ADMIN) {
-            throw new ResponseStatusException(FORBIDDEN, "teacher role required");
+            throw new ResponseStatusException(FORBIDDEN, "需要老师权限");
         }
     }
 }

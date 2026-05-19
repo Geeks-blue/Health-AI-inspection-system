@@ -18,6 +18,11 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 卫生巡查业务编排服务。
+ *
+ * <p>负责串联：图片落盘 → 调用 AI → 规则判定 → 写入数据库 → 老师复核流程。
+ */
 @Service
 public class CleaningService {
 
@@ -36,12 +41,19 @@ public class CleaningService {
         this.repository = repository;
     }
 
+    /**
+     * 学生上传图片后的核心入口：落盘 + AI + 规则 + 存库。
+     */
     @Transactional
     public CheckResponse check(MultipartFile photo, String classroomId, String uploaderId) throws IOException {
+        // 1) 图片落盘
         Path saved = photoStorage.save(photo);
+        // 2) 调用阿里云 AI 做目标检测
         DetectionResult detection = visionService.detect(saved);
+        // 3) 规则引擎给出 pass / review
         Judgement judgement = ruleEngine.judge(detection);
 
+        // 4) 写入数据库
         CleaningRecord record = new CleaningRecord();
         record.setClassroomId(classroomId);
         record.setUploaderId(uploaderId);
@@ -49,30 +61,41 @@ public class CleaningService {
         record.setAiResult(judgement.result());
         record.setAiDetail(judgement.reason());
         record.setCreatedAt(LocalDateTime.now());
-        // If AI passes, the inspection is final without teacher review.
+        // AI 直接合格的，最终结果直接写 pass，不需要老师介入
         if (CleaningRuleEngine.PASS.equals(judgement.result())) {
             record.setFinalResult("pass");
             record.setReviewedAt(record.getCreatedAt());
         }
         record = repository.save(record);
 
+        // 5) 返回给小程序
         return new CheckResponse(judgement.result(), judgement.reason(), String.valueOf(record.getId()));
     }
 
+    /** 老师查看待复核列表 */
     public List<ReviewItem> pendingReviews() {
         return repository.findByAiResultAndFinalResultIsNullOrderByCreatedAtAsc(CleaningRuleEngine.REVIEW)
                 .stream().map(ReviewItem::from).toList();
     }
 
+    /**
+     * 老师提交复核结果。
+     *
+     * @param recordId   记录 ID
+     * @param reviewerId 复核老师 ID（来自请求头）
+     * @param result     复核结论：pass / fail
+     */
     @Transactional
     public void submitReview(Long recordId, String reviewerId, String result) {
+        // 参数校验：只接受 pass / fail
         if (!"pass".equals(result) && !"fail".equals(result)) {
-            throw new IllegalArgumentException("result must be 'pass' or 'fail'");
+            throw new IllegalArgumentException("复核结果必须是 pass 或 fail");
         }
         CleaningRecord record = repository.findById(recordId)
-                .orElseThrow(() -> new IllegalArgumentException("record not found: " + recordId));
+                .orElseThrow(() -> new IllegalArgumentException("记录不存在: " + recordId));
+        // 防止重复复核
         if (record.getFinalResult() != null) {
-            throw new IllegalStateException("record already reviewed: " + recordId);
+            throw new IllegalStateException("该记录已复核: " + recordId);
         }
         record.setReviewerId(reviewerId);
         record.setFinalResult(result);

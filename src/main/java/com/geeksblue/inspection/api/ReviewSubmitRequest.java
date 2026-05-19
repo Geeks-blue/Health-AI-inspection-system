@@ -4,14 +4,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 /**
- * Request body for POST /api/cleaning/review/submit.
+ * POST /api/cleaning/review/submit 接口的请求体。
  */
 public class ReviewSubmitRequest {
 
+    /** 待复核记录 ID */
     @NotNull
     private Long recordId;
 
-    /** "pass" or "fail". */
+    /** 复核结果：pass 或 fail */
     @NotBlank
     private String result;
 

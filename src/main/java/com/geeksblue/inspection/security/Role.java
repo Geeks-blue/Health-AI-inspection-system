@@ -1,13 +1,19 @@
 package com.geeksblue.inspection.security;
 
 /**
- * Minimal role model. In production this should be backed by JWT or session auth;
- * here we read role + user id from request headers so the small footprint stays
- * within the scope of the design doc.
+ * 简化版的角色定义。
+ *
+ * <p>当前通过请求头 X-User-Role 传递，生产环境应替换为 JWT 或会话鉴权。
  */
 public enum Role {
-    STUDENT, TEACHER, ADMIN;
+    /** 学生：上传 */
+    STUDENT,
+    /** 老师：复核 */
+    TEACHER,
+    /** 管理员：统计 */
+    ADMIN;
 
+    /** 容错解析：未知角色一律视为学生（最低权限） */
     public static Role parse(String raw) {
         if (raw == null) return STUDENT;
         try {

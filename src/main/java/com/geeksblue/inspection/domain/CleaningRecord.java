@@ -5,8 +5,10 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * Persistent record of a classroom cleaning inspection.
- * Photo files are removed after retention-days, but the row is kept for stats.
+ * 卫生巡查记录实体。
+ *
+ * <p>说明：图片文件会在保留期（默认 7 天）后被定时任务清理，
+ * 但本表记录会一直保留，用于后续统计报表。
  */
 @Entity
 @Table(name = "cleaning_record", indexes = {
@@ -16,39 +18,48 @@ import java.time.LocalDateTime;
 })
 public class CleaningRecord {
 
+    /** 主键 */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** 教室编号 */
     @Column(name = "classroom_id", nullable = false, length = 64)
     private String classroomId;
 
+    /** 上传人（学生）ID */
     @Column(name = "uploader_id", nullable = false, length = 64)
     private String uploaderId;
 
+    /** 图片在服务器上的绝对路径，可能因清理任务而失效 */
     @Column(name = "photo_path", length = 512)
     private String photoPath;
 
-    /** "pass" or "review" — produced by the AI rule engine. */
+    /** AI 判定结果：pass / review */
     @Column(name = "ai_result", nullable = false, length = 16)
     private String aiResult;
 
-    /** Human-readable reasons, e.g. "floor_ok, desk_ok, podium_ok, bin_ok". */
+    /** AI 判定原因，例如 "floor_ok, desk_ok, podium_ok, bin_ok" */
     @Column(name = "ai_detail", length = 1024)
     private String aiDetail;
 
+    /** 复核老师 ID（仅 review 流程会写入） */
     @Column(name = "reviewer_id", length = 64)
     private String reviewerId;
 
-    /** "pass" or "fail" — set only after teacher review. */
+    /** 最终结果：pass / fail（AI 合格时直接写 pass；待复核时由老师写入） */
     @Column(name = "final_result", length = 16)
     private String finalResult;
 
+    /** 上传时间 */
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    /** 复核时间 */
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
+
+    // ===== getter / setter =====
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

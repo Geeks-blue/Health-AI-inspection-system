@@ -16,9 +16,10 @@ import java.util.Comparator;
 import java.util.stream.Stream;
 
 /**
- * Removes photos older than {@code cleaning.retention-days} (default 7) every
- * day at 03:00 server time. Database records are intentionally preserved so
- * statistics remain accurate.
+ * 图片清理定时任务。
+ *
+ * <p>每天 03:00 执行一次，删除超过 {@code cleaning.retention-days}（默认 7 天）的图片，
+ * 并清理空目录。数据库记录不会被删除，仍可用于统计。
  */
 @Component
 public class PhotoCleanupJob {
@@ -26,6 +27,7 @@ public class PhotoCleanupJob {
     private static final Logger log = LoggerFactory.getLogger(PhotoCleanupJob.class);
 
     private final PhotoStorage storage;
+    /** 图片保留天数 */
     private final int retentionDays;
 
     public PhotoCleanupJob(PhotoStorage storage,
@@ -34,37 +36,42 @@ public class PhotoCleanupJob {
         this.retentionDays = retentionDays;
     }
 
+    /** 每天凌晨 3 点执行 */
     @Scheduled(cron = "0 0 3 * * *")
     public void run() {
         Path root = storage.root();
         if (!Files.exists(root)) {
             return;
         }
+        // 计算过期时间点
         Instant cutoff = Instant.now().minus(Duration.ofDays(retentionDays));
         int deleted = 0;
         try (Stream<Path> walk = Files.walk(root)) {
-            // Walk depth-first so empty directories get pruned after their files.
+            // 倒序遍历：先删文件，再删空目录
             var paths = walk.sorted(Comparator.reverseOrder()).toList();
             for (Path p : paths) {
                 if (p.equals(root)) continue;
                 try {
                     BasicFileAttributes attrs = Files.readAttributes(p, BasicFileAttributes.class);
                     if (Files.isRegularFile(p) && attrs.lastModifiedTime().toInstant().isBefore(cutoff)) {
+                        // 文件已过期，直接删除
                         Files.deleteIfExists(p);
                         deleted++;
                     } else if (Files.isDirectory(p) && isEmpty(p)) {
+                        // 空目录顺手删掉，保持目录树整洁
                         Files.deleteIfExists(p);
                     }
                 } catch (IOException e) {
-                    log.warn("Failed to inspect/delete {}", p, e);
+                    log.warn("清理过程中处理文件失败 {}", p, e);
                 }
             }
         } catch (IOException e) {
-            log.error("Photo cleanup walk failed", e);
+            log.error("遍历图片目录失败", e);
         }
-        log.info("Photo cleanup removed {} files older than {} days", deleted, retentionDays);
+        log.info("图片清理完成，共删除 {} 个文件（保留天数={}）", deleted, retentionDays);
     }
 
+    /** 判断目录是否为空 */
     private static boolean isEmpty(Path dir) throws IOException {
         try (Stream<Path> entries = Files.list(dir)) {
             return entries.findAny().isEmpty();

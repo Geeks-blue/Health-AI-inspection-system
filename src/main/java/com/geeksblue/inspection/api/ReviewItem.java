@@ -5,17 +5,24 @@ import com.geeksblue.inspection.domain.CleaningRecord;
 import java.time.LocalDateTime;
 
 /**
- * Summary view of a record returned to teachers for review.
+ * 老师复核列表中的单条记录视图。
  */
 public class ReviewItem {
 
+    /** 记录 ID */
     private Long recordId;
+    /** 教室编号 */
     private String classroomId;
+    /** 上传人 ID */
     private String uploaderId;
+    /** 图片磁盘路径 */
     private String photoPath;
+    /** AI 判定原因 */
     private String aiDetail;
+    /** 上传时间 */
     private LocalDateTime createdAt;
 
+    /** 由实体转换为视图对象 */
     public static ReviewItem from(CleaningRecord r) {
         ReviewItem item = new ReviewItem();
         item.recordId = r.getId();
