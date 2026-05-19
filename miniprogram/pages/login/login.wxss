@@ -1,0 +1,29 @@
+.login { padding: 48rpx 32rpx; }
+
+.hero { text-align: center; margin-bottom: 48rpx; }
+.hero .logo { font-size: 96rpx; }
+.hero .title { font-size: 40rpx; font-weight: 600; margin-top: 16rpx; }
+.hero .subtitle { color: var(--c-muted); font-size: 26rpx; margin-top: 8rpx; }
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+}
+.role-card {
+  border: 2rpx solid var(--c-border);
+  border-radius: 12rpx;
+  padding: 24rpx 12rpx;
+  text-align: center;
+  background: #fafafa;
+  transition: all 0.15s;
+}
+.role-card .role-icon { font-size: 56rpx; }
+.role-card .role-name { font-size: 28rpx; font-weight: 600; margin-top: 8rpx; }
+.role-card .role-desc { font-size: 22rpx; color: var(--c-muted); margin-top: 4rpx; }
+
+.role-active {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+}
+.role-active .role-name { color: var(--c-primary-dark); }

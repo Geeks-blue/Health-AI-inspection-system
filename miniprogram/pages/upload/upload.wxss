@@ -1,13 +1,86 @@
-.input {
-  border: 1rpx solid #ddd;
-  padding: 12rpx;
-  border-radius: 8rpx;
-  margin-top: 8rpx;
+/* ===== 教室卡片网格 ===== */
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+  margin-top: 20rpx;
 }
-.preview {
-  width: 100%;
+.room {
+  position: relative;
+  border: 2rpx solid var(--c-border);
+  border-radius: 12rpx;
+  padding: 20rpx 16rpx;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+.room-id { font-size: 32rpx; font-weight: 600; }
+.room-name { color: var(--c-muted); font-size: 22rpx; margin-top: 2rpx; }
+.room-status {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--c-muted);
+}
+.room-status.free { color: #52c41a; }
+
+.room-self {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+  box-shadow: 0 0 0 4rpx rgba(24, 144, 255, 0.15);
+}
+.room-self .room-id { color: var(--c-primary-dark); }
+.room-self .room-status { color: var(--c-primary-dark); font-weight: 600; }
+
+.room-locked { background: #fafafa; opacity: 0.7; }
+.room-locked .room-id { color: var(--c-muted); }
+.room-locked .room-status { color: var(--c-danger); }
+
+/* ===== 拍照区 ===== */
+.photo-picker {
+  margin-top: 20rpx;
+  border: 4rpx dashed var(--c-border);
+  border-radius: 16rpx;
+  background: #fafafa;
+  padding: 80rpx 0;
+  text-align: center;
+}
+.picker-icon { font-size: 96rpx; }
+.picker-text { color: var(--c-muted); margin-top: 16rpx; font-size: 26rpx; }
+
+.photo-preview { margin-top: 20rpx; }
+.preview-img { width: 100%; border-radius: 12rpx; }
+.preview-actions {
+  display: flex;
+  gap: 16rpx;
+  justify-content: flex-end;
   margin-top: 16rpx;
-  border-radius: 8rpx;
 }
-.result-pass { color: #1890ff; font-weight: bold; }
-.result-review { color: #faad14; font-weight: bold; }
+
+/* ===== 结果卡 ===== */
+.result-line {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 12rpx 0;
+}
+.result-line + .result-line { border-top: 1rpx solid var(--c-border); }
+.result-label {
+  width: 80rpx;
+  color: var(--c-muted);
+  font-size: 24rpx;
+}
+
+/* ===== 底部固定操作栏 ===== */
+.actionbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: #fff;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.action-meta { flex: 1; font-size: 26rpx; }
+.action-btns { display: flex; gap: 12rpx; }
+.action-btns .btn { min-width: 140rpx; }
