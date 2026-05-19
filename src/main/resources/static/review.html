@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>复核 · 教室卫生 AI 巡查</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>待复核记录</h2>
+    <p class="muted">下列是 AI 判定为待复核的上传，请逐条确认。</p>
+    <button class="btn ghost" id="refresh-btn">刷新</button>
+  </div>
+
+  <div class="card" id="list-card">
+    <div id="empty" class="muted" style="text-align:center;padding:24px;display:none;">
+      暂无待复核记录 🎉
+    </div>
+    <table id="tbl" style="display:none;">
+      <thead>
+        <tr>
+          <th>教室</th>
+          <th>上传人</th>
+          <th>AI 原因</th>
+          <th>时间</th>
+          <th style="width:160px;">操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { requireLogin, renderNavbar, api, toast, fmtTime } from './assets/app.js';
+
+  if (!requireLogin(['TEACHER', 'ADMIN'])) throw new Error('not allowed');
+  renderNavbar('review');
+
+  const tbody = document.getElementById('tbody');
+  const tbl = document.getElementById('tbl');
+  const empty = document.getElementById('empty');
+
+  async function load() {
+    try {
+      const items = await api('/api/cleaning/review/list');
+      tbody.innerHTML = '';
+      if (!items.length) {
+        tbl.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      tbl.style.display = 'table';
+      for (const it of items) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${it.classroomId}</td>
+          <td>${it.uploaderId}</td>
+          <td>${it.aiDetail || ''}</td>
+          <td>${fmtTime(it.createdAt)}</td>
+          <td>
+            <button class="btn" data-id="${it.recordId}" data-result="pass">通过</button>
+            <button class="btn danger" data-id="${it.recordId}" data-result="fail">不通过</button>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+    } catch (e) {
+      toast(e.message || '加载失败', 'error');
+    }
+  }
+
+  // 事件委托：所有「通过 / 不通过」按钮共用一个 handler
+  tbody.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-id]');
+    if (!btn) return;
+    const recordId = Number(btn.dataset.id);
+    const result = btn.dataset.result;
+    btn.disabled = true;
+    try {
+      await api('/api/cleaning/review/submit', {
+        method: 'POST',
+        body: { recordId, result }
+      });
+      toast('已提交', 'success');
+      await load();
+    } catch (err) {
+      toast(err.message || '提交失败', 'error');
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('refresh-btn').onclick = load;
+  load();
+</script>
+</body>
+</html>

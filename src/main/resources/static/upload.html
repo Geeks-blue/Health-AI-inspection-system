@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>上传 · 教室卫生 AI 巡查</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>上传教室照片</h2>
+    <p class="muted">拍摄当前教室的卫生情况，提交后由 AI 判定；不合格的会自动转老师复核。</p>
+
+    <div class="form-row">
+      <label>教室编号</label>
+      <input type="text" id="classroom-id" placeholder="例如 A101" />
+    </div>
+    <div class="form-row">
+      <label>照片</label>
+      <input type="file" id="photo" accept="image/*" />
+      <img id="preview" style="display:none;max-width:100%;margin-top:12px;border-radius:6px;" />
+    </div>
+    <button class="btn" id="submit-btn">提交</button>
+  </div>
+
+  <div class="card" id="result-card" style="display:none;">
+    <h2>判定结果</h2>
+    <div style="margin-bottom:8px;">
+      结果：<span id="r-result" class="badge"></span>
+    </div>
+    <div class="muted">原因：<span id="r-reason"></span></div>
+    <div class="muted">记录 ID：<span id="r-id"></span></div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireLogin, renderNavbar, upload, toast } from './assets/app.js';
+
+  if (!requireLogin(['STUDENT', 'TEACHER', 'ADMIN'])) throw new Error('not logged in');
+  renderNavbar('upload');
+
+  const photoInput = document.getElementById('photo');
+  const preview = document.getElementById('preview');
+  // 选图后展示预览，便于用户确认拍清楚了再提交
+  photoInput.onchange = () => {
+    const f = photoInput.files[0];
+    if (!f) { preview.style.display = 'none'; return; }
+    preview.src = URL.createObjectURL(f);
+    preview.style.display = 'block';
+  };
+
+  document.getElementById('submit-btn').onclick = async () => {
+    const classroomId = document.getElementById('classroom-id').value.trim();
+    const file = photoInput.files[0];
+    if (!classroomId) { toast('请填写教室编号', 'error'); return; }
+    if (!file) { toast('请选择照片', 'error'); return; }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = '提交中…';
+    try {
+      const r = await upload('/api/cleaning/check', file, { classroomId });
+      document.getElementById('result-card').style.display = 'block';
+      const badge = document.getElementById('r-result');
+      badge.textContent = r.result;
+      badge.className = 'badge ' + r.result;
+      document.getElementById('r-reason').textContent = r.reason;
+      document.getElementById('r-id').textContent = r.record_id;
+      toast(r.result === 'pass' ? 'AI 判定合格' : '已提交，待老师复核', 'success');
+    } catch (e) {
+      toast(e.message || '上传失败', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '提交';
+    }
+  };
+</script>
+</body>
+</html>

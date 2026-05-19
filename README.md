@@ -29,10 +29,18 @@
 | POST | `/api/cleaning/check` | 学生 | 上传图片 + 教室ID，返回 `pass` / `review` + `record_id` |
 | GET | `/api/cleaning/review/list` | 老师 | 查询待复核的记录列表 |
 | POST | `/api/cleaning/review/submit` | 老师 | 对 `record_id` 提交 `pass` / `fail` 的复核结果 |
+| GET | `/api/cleaning/stats` | 管理员 | 按教室聚合统计，可选 `from` / `to` ISO 时间过滤 |
 
 请求头 `X-User-Role` 与 `X-User-Id` 用于传递角色和用户ID；生产环境请替换为 JWT 鉴权。
 
-小程序端的接入示例和详细说明见 [docs/miniprogram-integration.md](docs/miniprogram-integration.md)，可运行的小程序工程在 [miniprogram/](miniprogram/) 目录。
+### 前端
+
+- **微信小程序**：[miniprogram/](miniprogram/) 目录，详见 [docs/miniprogram-integration.md](docs/miniprogram-integration.md)。
+- **Web 管理后台**：源码在 [src/main/resources/static/](src/main/resources/static/)，由 Spring Boot 自动托管。启动后访问 <http://localhost:8080/>，依次包含：
+  - `index.html` — 角色选择（学生 / 老师 / 管理员）
+  - `upload.html` — 学生在 PC 端补传照片，便于调试
+  - `review.html` — 老师复核台，支持「通过 / 不通过」
+  - `stats.html` — 管理员统计面板，含教室聚合明细 + 时间区间过滤
 
 ### 调用示例
 

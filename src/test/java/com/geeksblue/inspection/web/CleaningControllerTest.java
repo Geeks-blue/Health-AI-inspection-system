@@ -162,4 +162,54 @@ class CleaningControllerTest {
                         .content(submitBody))
                 .andExpect(status().isConflict());
     }
+
+    /** 管理员统计：聚合两间教室、覆盖 pass / review / fail 三类 */
+    @Test
+    void statsAggregatesByClassroom() throws Exception {
+        // A101：上传一张 pass
+        when(visionService.detect(any(Path.class))).thenReturn(new DetectionResult());
+        uploadAs("A101", "STUDENT");
+
+        // B202：上传 review 并复核为 fail
+        DetectionResult dirty = new DetectionResult();
+        dirty.getDeskTrash().add("bottle");
+        when(visionService.detect(any(Path.class))).thenReturn(dirty);
+        long b202Id = uploadAs("B202", "STUDENT");
+        mvc.perform(post("/api/cleaning/review/submit")
+                        .header("X-User-Role", "TEACHER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"recordId\":" + b202Id + ",\"result\":\"fail\"}"))
+                .andExpect(status().isNoContent());
+
+        // 管理员能拿到全局聚合
+        mvc.perform(get("/api/cleaning/stats")
+                        .header("X-User-Role", "ADMIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalRecords").value(2))
+                .andExpect(jsonPath("$.aiPassCount").value(1))
+                .andExpect(jsonPath("$.aiReviewCount").value(1))
+                .andExpect(jsonPath("$.finalFailCount").value(1))
+                .andExpect(jsonPath("$.pendingReviewCount").value(0))
+                .andExpect(jsonPath("$.classrooms.length()").value(2));
+
+        // 老师角色不能访问统计接口
+        mvc.perform(get("/api/cleaning/stats")
+                        .header("X-User-Role", "TEACHER"))
+                .andExpect(status().isForbidden());
+    }
+
+    /** 测试小工具：模拟一次上传，返回新建记录 ID */
+    private long uploadAs(String classroomId, String role) throws Exception {
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo", "p.jpg", MediaType.IMAGE_JPEG_VALUE, new byte[]{1});
+        MvcResult res = mvc.perform(multipart("/api/cleaning/check")
+                        .file(photo)
+                        .param("classroomId", classroomId)
+                        .header("X-User-Id", "tester")
+                        .header("X-User-Role", role))
+                .andExpect(status().isOk())
+                .andReturn();
+        return json.readTree(res.getResponse().getContentAsString())
+                .get("record_id").asLong();
+    }
 }

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录 · 教室卫生 AI 巡查</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <style>
+    .login-wrap {
+      max-width: 420px;
+      margin: 80px auto;
+      padding: 32px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    }
+    .login-wrap h1 { margin: 0 0 8px; }
+    .login-wrap .sub { color: var(--c-muted); margin-bottom: 24px; }
+  </style>
+</head>
+<body>
+<div class="login-wrap">
+  <h1>教室卫生 AI 巡查</h1>
+  <p class="sub">演示登录：直接选择身份。生产环境请替换为统一身份认证。</p>
+
+  <div class="form-row">
+    <label>用户 ID</label>
+    <input type="text" id="user-id" placeholder="例如 stu-001 / teacher-007" />
+  </div>
+  <div class="form-row">
+    <label>身份</label>
+    <select id="user-role">
+      <option value="STUDENT">学生（上传）</option>
+      <option value="TEACHER">老师（复核）</option>
+      <option value="ADMIN">管理员（统计）</option>
+    </select>
+  </div>
+  <button class="btn" id="login-btn" style="width:100%;">进入系统</button>
+</div>
+
+<script type="module">
+  import { setUser, toast } from './assets/app.js';
+
+  document.getElementById('login-btn').onclick = () => {
+    const id = document.getElementById('user-id').value.trim();
+    const role = document.getElementById('user-role').value;
+    if (!id) { toast('请填写用户 ID', 'error'); return; }
+    setUser({ id, role });
+    // 学生跳上传页，其它先到能看到的第一个页面
+    const home = role === 'STUDENT' ? 'upload.html'
+               : role === 'TEACHER' ? 'review.html'
+               : 'stats.html';
+    location.href = home;
+  };
+</script>
+</body>
+</html>

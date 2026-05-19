@@ -3,15 +3,18 @@ package com.geeksblue.inspection.web;
 import com.geeksblue.inspection.api.CheckResponse;
 import com.geeksblue.inspection.api.ReviewItem;
 import com.geeksblue.inspection.api.ReviewSubmitRequest;
+import com.geeksblue.inspection.api.StatsResponse;
 import com.geeksblue.inspection.security.Role;
 import com.geeksblue.inspection.service.CleaningService;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.FORBIDDEN;
@@ -75,5 +78,20 @@ public class CleaningController {
         if (role != Role.TEACHER && role != Role.ADMIN) {
             throw new ResponseStatusException(FORBIDDEN, "需要老师权限");
         }
+    }
+
+    /** 管理员：聚合统计（按教室） */
+    @GetMapping("/stats")
+    public StatsResponse stats(
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(value = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+        Role role = Role.parse(roleHeader);
+        if (role != Role.ADMIN) {
+            throw new ResponseStatusException(FORBIDDEN, "需要管理员权限");
+        }
+        return service.stats(from, to);
     }
 }

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>统计 · 教室卫生 AI 巡查</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>巡查统计</h2>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <label class="muted">起始时间</label>
+        <input type="datetime-local" id="from" />
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <label class="muted">结束时间</label>
+        <input type="datetime-local" id="to" />
+      </div>
+      <button class="btn" id="apply">查询</button>
+      <button class="btn ghost" id="reset">重置</button>
+    </div>
+  </div>
+
+  <div class="stat-grid" id="summary"></div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2 style="margin-top:0;">按教室明细</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>教室</th>
+          <th>总次数</th>
+          <th>AI 合格</th>
+          <th>待复核</th>
+          <th>最终不合格</th>
+          <th>不合格率</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { requireLogin, renderNavbar, api, toast } from './assets/app.js';
+
+  if (!requireLogin(['ADMIN'])) throw new Error('not allowed');
+  renderNavbar('stats');
+
+  function renderSummary(s) {
+    const grid = document.getElementById('summary');
+    grid.innerHTML = `
+      <div class="stat-card"><div class="num">${s.totalRecords}</div><div class="label">总记录数</div></div>
+      <div class="stat-card"><div class="num">${s.aiPassCount}</div><div class="label">AI 直接合格</div></div>
+      <div class="stat-card"><div class="num warn">${s.aiReviewCount}</div><div class="label">AI 标为复核</div></div>
+      <div class="stat-card"><div class="num warn">${s.pendingReviewCount}</div><div class="label">仍待处理</div></div>
+      <div class="stat-card"><div class="num danger">${s.finalFailCount}</div><div class="label">最终不合格</div></div>
+    `;
+  }
+
+  function renderRows(rooms) {
+    const tbody = document.getElementById('rows');
+    if (!rooms.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;">暂无数据</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rooms.map(r => {
+      const rate = r.total ? (r.finalFail * 100 / r.total).toFixed(1) + '%' : '0%';
+      return `<tr>
+        <td>${r.classroomId}</td>
+        <td>${r.total}</td>
+        <td>${r.aiPass}</td>
+        <td><span class="badge review">${r.aiReview}</span></td>
+        <td><span class="badge fail">${r.finalFail}</span></td>
+        <td>${rate}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function load() {
+    const from = document.getElementById('from').value;
+    const to = document.getElementById('to').value;
+    const params = new URLSearchParams();
+    // 浏览器 datetime-local 只到分钟，补齐秒后兼容后端 ISO 解析
+    if (from) params.set('from', from + ':00');
+    if (to) params.set('to', to + ':00');
+    try {
+      const s = await api('/api/cleaning/stats' + (params.toString() ? '?' + params : ''));
+      renderSummary(s);
+      renderRows(s.classrooms || []);
+    } catch (e) {
+      toast(e.message || '加载失败', 'error');
+    }
+  }
+
+  document.getElementById('apply').onclick = load;
+  document.getElementById('reset').onclick = () => {
+    document.getElementById('from').value = '';
+    document.getElementById('to').value = '';
+    load();
+  };
+  load();
+</script>
+</body>
+</html>

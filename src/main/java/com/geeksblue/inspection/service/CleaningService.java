@@ -6,6 +6,8 @@ import com.geeksblue.inspection.ai.CleaningRuleEngine.Judgement;
 import com.geeksblue.inspection.ai.DetectionResult;
 import com.geeksblue.inspection.api.CheckResponse;
 import com.geeksblue.inspection.api.ReviewItem;
+import com.geeksblue.inspection.api.StatsResponse;
+import com.geeksblue.inspection.api.StatsResponse.ClassroomStat;
 import com.geeksblue.inspection.domain.CleaningRecord;
 import com.geeksblue.inspection.domain.CleaningRecordRepository;
 import com.geeksblue.inspection.storage.PhotoStorage;
@@ -16,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -101,5 +104,39 @@ public class CleaningService {
         record.setFinalResult(result);
         record.setReviewedAt(LocalDateTime.now());
         repository.save(record);
+    }
+
+    /**
+     * 管理员统计接口。
+     *
+     * @param from 起始时间（含），null 表示不限
+     * @param to   结束时间（不含），null 表示不限
+     */
+    public StatsResponse stats(LocalDateTime from, LocalDateTime to) {
+        List<Object[]> rows = repository.aggregateByClassroom(from, to);
+        List<ClassroomStat> classrooms = new ArrayList<>(rows.size());
+        long total = 0, aiPass = 0, aiReview = 0, finalFail = 0;
+        for (Object[] r : rows) {
+            // 不同 DB 对 SUM/COUNT 的返回类型不一致，统一走 Number 接口转 long
+            String classroomId = (String) r[0];
+            long t = ((Number) r[1]).longValue();
+            long p = r[2] == null ? 0 : ((Number) r[2]).longValue();
+            long rv = r[3] == null ? 0 : ((Number) r[3]).longValue();
+            long ff = r[4] == null ? 0 : ((Number) r[4]).longValue();
+            classrooms.add(new ClassroomStat(classroomId, t, p, rv, ff));
+            total += t; aiPass += p; aiReview += rv; finalFail += ff;
+        }
+        long pending = repository
+                .findByAiResultAndFinalResultIsNullOrderByCreatedAtAsc(CleaningRuleEngine.REVIEW)
+                .size();
+
+        StatsResponse resp = new StatsResponse();
+        resp.setTotalRecords(total);
+        resp.setAiPassCount(aiPass);
+        resp.setAiReviewCount(aiReview);
+        resp.setFinalFailCount(finalFail);
+        resp.setPendingReviewCount(pending);
+        resp.setClassrooms(classrooms);
+        return resp;
     }
 }
