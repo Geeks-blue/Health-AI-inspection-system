@@ -1,0 +1,37 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: health-ai-inspection-system
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  datasource:
+    url: jdbc:h2:file:./data/h2db;AUTO_SERVER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+cleaning:
+  # Root directory for uploaded classroom photos
+  storage-root: ./data/cleaning
+  # Retention period for photos in days (DB records are kept)
+  retention-days: 7
+
+aliyun:
+  access-key-id: ${ALIYUN_ACCESS_KEY_ID:}
+  access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:}
+  imagerecog-endpoint: imagerecog.cn-shanghai.aliyuncs.com
+  # When true, AI calls are skipped and a stub result is returned (useful for dev/tests)
+  mock: true

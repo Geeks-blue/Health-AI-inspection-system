@@ -1,0 +1,22 @@
+# Build artifacts
+target/
+build/
+out/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Logs & data
+*.log
+data/
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
