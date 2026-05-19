@@ -33,15 +33,18 @@ public class CleaningService {
     private final AliyunVisionService visionService;
     private final CleaningRuleEngine ruleEngine;
     private final CleaningRecordRepository repository;
+    private final ClassroomLockService lockService;
 
     public CleaningService(PhotoStorage photoStorage,
                            AliyunVisionService visionService,
                            CleaningRuleEngine ruleEngine,
-                           CleaningRecordRepository repository) {
+                           CleaningRecordRepository repository,
+                           ClassroomLockService lockService) {
         this.photoStorage = photoStorage;
         this.visionService = visionService;
         this.ruleEngine = ruleEngine;
         this.repository = repository;
+        this.lockService = lockService;
     }
 
     /**
@@ -71,7 +74,10 @@ public class CleaningService {
         }
         record = repository.save(record);
 
-        // 5) 返回给小程序
+        // 6) 上传成功，立即释放该教室的占用锁（如果是自己持有），让别人可以接着选
+        lockService.release(classroomId, uploaderId);
+
+        // 7) 返回给小程序
         return new CheckResponse(judgement.result(), judgement.reason(), String.valueOf(record.getId()));
     }
 

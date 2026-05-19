@@ -9,19 +9,23 @@
 <body>
 <div class="container">
   <div class="card">
-    <h2>上传教室照片</h2>
-    <p class="muted">拍摄当前教室的卫生情况，提交后由 AI 判定；不合格的会自动转老师复核。</p>
-
-    <div class="form-row">
-      <label>教室编号</label>
-      <input type="text" id="classroom-id" placeholder="例如 A101" />
+    <h2>选择教室</h2>
+    <p class="muted">点选一间空闲教室即可锁定上传位（5 分钟内有效）；上传成功后自动释放给下一个人。</p>
+    <div id="room-grid" class="room-grid">
+      <div class="muted" style="padding:24px;text-align:center;grid-column:1/-1;">加载中…</div>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>上传照片</h2>
+    <p class="muted">当前选中：<span id="selected-room" class="muted">未选择</span></p>
     <div class="form-row">
       <label>照片</label>
       <input type="file" id="photo" accept="image/*" />
       <img id="preview" style="display:none;max-width:100%;margin-top:12px;border-radius:6px;" />
     </div>
-    <button class="btn" id="submit-btn">提交</button>
+    <button class="btn" id="submit-btn" disabled>提交</button>
+    <button class="btn ghost" id="cancel-btn" style="margin-left:8px;display:none;">取消选择</button>
   </div>
 
   <div class="card" id="result-card" style="display:none;">
@@ -35,14 +39,108 @@
 </div>
 
 <script type="module">
-  import { requireLogin, renderNavbar, upload, toast } from './assets/app.js';
+  import { requireLogin, renderNavbar, api, upload, toast, fmtTime } from './assets/app.js';
 
-  if (!requireLogin(['STUDENT', 'TEACHER', 'ADMIN'])) throw new Error('not logged in');
+  const user = requireLogin(['STUDENT', 'TEACHER', 'ADMIN']);
+  if (!user) throw new Error('not logged in');
   renderNavbar('upload');
 
+  // 当前用户已经锁定的教室 ID
+  let claimedRoom = null;
+  let rooms = [];
+  let pollTimer = null;
+
+  const grid = document.getElementById('room-grid');
+  const selectedRoomEl = document.getElementById('selected-room');
+  const submitBtn = document.getElementById('submit-btn');
+  const cancelBtn = document.getElementById('cancel-btn');
   const photoInput = document.getElementById('photo');
   const preview = document.getElementById('preview');
-  // 选图后展示预览，便于用户确认拍清楚了再提交
+
+  /** 拉教室列表并渲染网格 */
+  async function refreshRooms() {
+    try {
+      rooms = await api('/api/classrooms');
+      renderGrid();
+    } catch (e) {
+      grid.innerHTML = `<div class="muted" style="grid-column:1/-1;text-align:center;">${e.message || '加载失败'}</div>`;
+    }
+  }
+
+  function renderGrid() {
+    grid.innerHTML = '';
+    for (const r of rooms) {
+      const isSelf = r.locked && r.lockedBy === user.id;
+      const isLocked = r.locked && !isSelf;
+      const cls = ['room'];
+      if (isLocked) cls.push('room-locked');
+      if (isSelf) cls.push('room-self');
+      if (claimedRoom === r.id) cls.push('room-selected');
+
+      let status = '空闲';
+      if (isSelf) status = '✓ 你已选中';
+      else if (isLocked) status = '占用中：' + r.lockedBy;
+
+      const el = document.createElement('div');
+      el.className = cls.join(' ');
+      el.dataset.id = r.id;
+      el.innerHTML = `
+        <div class="room-id">${r.id}</div>
+        <div class="room-name">${r.name || ''}</div>
+        <div class="room-status">${status}</div>
+      `;
+      if (!isLocked) {
+        el.onclick = () => selectRoom(r.id);
+      }
+      grid.appendChild(el);
+    }
+  }
+
+  async function selectRoom(id) {
+    if (claimedRoom === id) return;
+    try {
+      const dto = await api(`/api/classrooms/${encodeURIComponent(id)}/claim`, { method: 'POST' });
+      // 如果之前已经选过别的教室，释放掉旧的
+      if (claimedRoom && claimedRoom !== id) {
+        await releaseRoom(claimedRoom, /* silent */ true);
+      }
+      claimedRoom = dto.id;
+      selectedRoomEl.textContent = `${dto.id} ${dto.name || ''}`;
+      selectedRoomEl.className = '';
+      submitBtn.disabled = false;
+      cancelBtn.style.display = 'inline-block';
+      refreshRooms();
+    } catch (e) {
+      if (e.status === 409) {
+        toast('已被他人占用，请换一间', 'error');
+        refreshRooms();
+      } else {
+        toast(e.message || '占用失败', 'error');
+      }
+    }
+  }
+
+  async function releaseRoom(id, silent = false) {
+    try {
+      await api(`/api/classrooms/${encodeURIComponent(id)}/release`, { method: 'POST' });
+      if (!silent) toast('已释放', 'success');
+    } catch (e) {
+      if (!silent) toast(e.message || '释放失败', 'error');
+    } finally {
+      if (claimedRoom === id) {
+        claimedRoom = null;
+        selectedRoomEl.textContent = '未选择';
+        selectedRoomEl.className = 'muted';
+        submitBtn.disabled = true;
+        cancelBtn.style.display = 'none';
+      }
+      refreshRooms();
+    }
+  }
+
+  cancelBtn.onclick = () => { if (claimedRoom) releaseRoom(claimedRoom); };
+
+  // 选图预览
   photoInput.onchange = () => {
     const f = photoInput.files[0];
     if (!f) { preview.style.display = 'none'; return; }
@@ -50,16 +148,15 @@
     preview.style.display = 'block';
   };
 
-  document.getElementById('submit-btn').onclick = async () => {
-    const classroomId = document.getElementById('classroom-id').value.trim();
+  // 提交：上传 + 后端会自动释放锁
+  submitBtn.onclick = async () => {
+    if (!claimedRoom) { toast('请先选择教室', 'error'); return; }
     const file = photoInput.files[0];
-    if (!classroomId) { toast('请填写教室编号', 'error'); return; }
     if (!file) { toast('请选择照片', 'error'); return; }
 
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true; btn.textContent = '提交中…';
+    submitBtn.disabled = true; submitBtn.textContent = '提交中…';
     try {
-      const r = await upload('/api/cleaning/check', file, { classroomId });
+      const r = await upload('/api/cleaning/check', file, { classroomId: claimedRoom });
       document.getElementById('result-card').style.display = 'block';
       const badge = document.getElementById('r-result');
       badge.textContent = r.result;
@@ -67,12 +164,39 @@
       document.getElementById('r-reason').textContent = r.reason;
       document.getElementById('r-id').textContent = r.record_id;
       toast(r.result === 'pass' ? 'AI 判定合格' : '已提交，待老师复核', 'success');
+
+      // 后端已经释放锁；本地状态同步
+      claimedRoom = null;
+      selectedRoomEl.textContent = '未选择';
+      selectedRoomEl.className = 'muted';
+      cancelBtn.style.display = 'none';
+      photoInput.value = '';
+      preview.style.display = 'none';
+      refreshRooms();
     } catch (e) {
       toast(e.message || '上传失败', 'error');
+      submitBtn.disabled = false;
     } finally {
-      btn.disabled = false; btn.textContent = '提交';
+      submitBtn.textContent = '提交';
     }
   };
+
+  // 关闭/刷新页面时尽量释放锁，避免 5 分钟才超时
+  window.addEventListener('beforeunload', () => {
+    if (claimedRoom) {
+      // sendBeacon 在页面关闭时也能发出请求；fetch keepalive 是兜底
+      const url = `/api/classrooms/${encodeURIComponent(claimedRoom)}/release`;
+      // sendBeacon 不能带自定义头，所以这里用 fetch keepalive 才能带 X-User-Id
+      fetch(url, {
+        method: 'POST', keepalive: true,
+        headers: { 'X-User-Id': user.id, 'X-User-Role': user.role }
+      }).catch(() => {});
+    }
+  });
+
+  // 启动 + 每 3 秒轮询一次
+  refreshRooms();
+  pollTimer = setInterval(refreshRooms, 3000);
 </script>
 </body>
 </html>

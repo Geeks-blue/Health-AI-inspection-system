@@ -1,12 +1,14 @@
 :root {
-  --c-primary: #1aad19;
-  --c-warn: #e6a23c;
-  --c-danger: #f56c6c;
-  --c-bg: #f7f7f7;
+  --c-primary: #1890ff;
+  --c-primary-dark: #096dd9;
+  --c-primary-light: #e6f4ff;
+  --c-warn: #faad14;
+  --c-danger: #f5222d;
+  --c-bg: #f0f2f5;
   --c-card: #ffffff;
-  --c-text: #303133;
-  --c-muted: #909399;
-  --c-border: #ebeef5;
+  --c-text: #1f1f1f;
+  --c-muted: #8c8c8c;
+  --c-border: #d9d9d9;
 }
 
 * { box-sizing: border-box; }
@@ -85,11 +87,13 @@ button.btn {
   cursor: pointer;
   font-size: 14px;
 }
-button.btn:hover { opacity: 0.9; }
+button.btn:hover { background: var(--c-primary-dark); }
 button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+button.btn:disabled:hover { background: var(--c-primary); }
 button.btn.warn { background: var(--c-warn); }
 button.btn.danger { background: var(--c-danger); }
 button.btn.ghost { background: #f4f4f5; color: var(--c-text); }
+button.btn.ghost:hover { background: #e6e6e6; }
 
 /* 表格 */
 table { width: 100%; border-collapse: collapse; }
@@ -107,9 +111,9 @@ th { color: var(--c-muted); font-weight: 600; background: #fafafa; }
   border-radius: 10px;
   font-size: 12px;
 }
-.badge.pass { background: #f0f9eb; color: var(--c-primary); }
-.badge.review { background: #fdf6ec; color: var(--c-warn); }
-.badge.fail { background: #fef0f0; color: var(--c-danger); }
+.badge.pass { background: var(--c-primary-light); color: var(--c-primary-dark); }
+.badge.review { background: #fff7e6; color: var(--c-warn); }
+.badge.fail { background: #fff1f0; color: var(--c-danger); }
 
 /* 统计大数字 */
 .stat-grid {
@@ -146,3 +150,51 @@ th { color: var(--c-muted); font-weight: 600; background: #fafafa; }
 .toast.show { opacity: 0.95; transform: translateY(0); }
 .toast.success { background: var(--c-primary); }
 .toast.error { background: var(--c-danger); }
+
+/* 教室选择网格 */
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.room {
+  position: relative;
+  background: #fff;
+  border: 2px solid var(--c-border);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  user-select: none;
+}
+.room:hover:not(.room-locked):not(.room-self):not(.room-selected) {
+  border-color: var(--c-primary);
+}
+.room .room-id { font-size: 18px; font-weight: 600; }
+.room .room-name { color: var(--c-muted); font-size: 13px; margin-top: 4px; }
+.room .room-status {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--c-muted);
+}
+/* 已被别人占用：灰色背景，不可点 */
+.room.room-locked {
+  background: #fafafa;
+  border-color: var(--c-border);
+  cursor: not-allowed;
+}
+.room.room-locked .room-id { color: var(--c-muted); }
+.room.room-locked .room-status { color: var(--c-danger); }
+/* 自己占用：高亮 */
+.room.room-self {
+  border-color: var(--c-primary);
+  background: var(--c-primary-light);
+}
+.room.room-self .room-status { color: var(--c-primary-dark); font-weight: 600; }
+/* 当前选中（也就是自己占用的那间） */
+.room.room-selected {
+  border-color: var(--c-primary);
+  background: var(--c-primary-light);
+  box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.15);
+}
