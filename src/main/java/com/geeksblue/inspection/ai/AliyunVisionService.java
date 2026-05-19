@@ -1,9 +1,9 @@
 package com.geeksblue.inspection.ai;
 
 import com.aliyun.imagerecog20190930.Client;
-import com.aliyun.imagerecog20190930.models.DetectObjectAdvanceRequest;
-import com.aliyun.imagerecog20190930.models.DetectObjectResponse;
-import com.aliyun.imagerecog20190930.models.DetectObjectResponseBody;
+import com.aliyun.imagerecog20190930.models.DetectImageElementsAdvanceRequest;
+import com.aliyun.imagerecog20190930.models.DetectImageElementsResponse;
+import com.aliyun.imagerecog20190930.models.DetectImageElementsResponseBody;
 import com.aliyun.teaopenapi.models.Config;
 import com.aliyun.teautil.models.RuntimeOptions;
 import org.slf4j.Logger;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * 阿里云视觉智能（objectdet 目标检测）调用封装。
+ * 阿里云视觉智能（图像目标检测 detectImageElements）调用封装。
  *
  * <p>将检测到的目标按地面 / 桌面 / 讲台 / 垃圾桶四类聚合，供规则引擎消费。
  *
@@ -51,7 +51,7 @@ public class AliyunVisionService {
     }
 
     /**
-     * 对指定图片调用阿里云目标检测。
+     * 对指定图片调用阿里云图像目标检测。
      *
      * @param imagePath 服务器本地图片路径
      * @return 检测结果（按区域分类）
@@ -71,10 +71,11 @@ public class AliyunVisionService {
             Client client = new Client(config);
 
             // 以输入流方式上传图片
-            DetectObjectAdvanceRequest request = new DetectObjectAdvanceRequest();
-            request.setImageURLObject(in);
+            DetectImageElementsAdvanceRequest request = new DetectImageElementsAdvanceRequest();
+            request.setUrlObject(in);
 
-            DetectObjectResponse response = client.detectObjectAdvance(request, new RuntimeOptions());
+            DetectImageElementsResponse response =
+                    client.detectImageElementsAdvance(request, new RuntimeOptions());
             return mapResponse(response);
         } catch (Exception e) {
             log.error("阿里云视觉调用失败，图片={}", imagePath, e);
@@ -90,12 +91,12 @@ public class AliyunVisionService {
      *
      * <p>当前是基于目标 type 的简化映射，后续可替换为更精细的位置/面积/置信度规则。
      */
-    private DetectionResult mapResponse(DetectObjectResponse response) {
+    private DetectionResult mapResponse(DetectImageElementsResponse response) {
         DetectionResult result = new DetectionResult();
         if (response == null || response.getBody() == null || response.getBody().getData() == null) {
             return result;
         }
-        List<DetectObjectResponseBody.DetectObjectResponseBodyDataElements> elements =
+        List<DetectImageElementsResponseBody.DetectImageElementsResponseBodyDataElements> elements =
                 response.getBody().getData().getElements();
         if (elements == null) {
             return result;

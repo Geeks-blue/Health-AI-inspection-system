@@ -1,0 +1,26 @@
+# 测试用配置：内存 H2 + AI mock，避免污染本地数据
+server:
+  port: 0
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+cleaning:
+  storage-root: ./build/test-uploads
+  retention-days: 7
+
+aliyun:
+  access-key-id: ""
+  access-key-secret: ""
+  imagerecog-endpoint: imagerecog.cn-shanghai.aliyuncs.com
+  mock: true

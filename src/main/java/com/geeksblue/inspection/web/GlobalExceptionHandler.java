@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -27,6 +28,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> conflict(IllegalStateException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+    }
+
+    /** ResponseStatusException：按异常自带的状态码透传，例如 403、404 */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> responseStatus(ResponseStatusException e) {
+        String msg = e.getReason() == null ? e.getStatusCode().toString() : e.getReason();
+        return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", msg));
     }
 
     /** 未捕获异常：500，同时记录日志便于排查 */
