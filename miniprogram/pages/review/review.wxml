@@ -1,0 +1,20 @@
+<!-- 老师复核列表 -->
+<view wx:if="{{loading}}" class="muted" style="padding:24rpx;">加载中…</view>
+<view wx:elif="{{list.length === 0}}" class="muted" style="padding:24rpx;">暂无待复核记录</view>
+
+<block wx:for="{{list}}" wx:key="recordId">
+  <view class="card">
+    <view>教室：{{item.classroomId}}</view>
+    <view class="muted">上传人：{{item.uploaderId}}</view>
+    <view class="muted">AI 原因：{{item.aiDetail}}</view>
+    <view class="muted">时间：{{item.createdAt}}</view>
+    <view class="actions">
+      <button size="mini" type="primary"
+              data-id="{{item.recordId}}" data-result="pass"
+              bindtap="submit">通过</button>
+      <button size="mini" type="warn"
+              data-id="{{item.recordId}}" data-result="fail"
+              bindtap="submit">不通过</button>
+    </view>
+  </view>
+</block>

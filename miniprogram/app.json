@@ -1,0 +1,24 @@
+{
+  "pages": [
+    "pages/upload/upload",
+    "pages/review/review"
+  ],
+  "window": {
+    "navigationBarTitleText": "教室卫生巡查",
+    "navigationBarBackgroundColor": "#1aad19",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f7f7f7"
+  },
+  "tabBar": {
+    "color": "#999",
+    "selectedColor": "#1aad19",
+    "list": [
+      { "pagePath": "pages/upload/upload", "text": "上传" },
+      { "pagePath": "pages/review/review", "text": "复核" }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": { "desc": "用于标记教室位置（可选）" }
+  },
+  "sitemapLocation": "sitemap.json"
+}
