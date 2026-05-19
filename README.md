@@ -32,6 +32,8 @@
 
 请求头 `X-User-Role` 与 `X-User-Id` 用于传递角色和用户ID；生产环境请替换为 JWT 鉴权。
 
+小程序端的接入示例和详细说明见 [docs/miniprogram-integration.md](docs/miniprogram-integration.md)，可运行的小程序工程在 [miniprogram/](miniprogram/) 目录。
+
 ### 调用示例
 
 ```bash

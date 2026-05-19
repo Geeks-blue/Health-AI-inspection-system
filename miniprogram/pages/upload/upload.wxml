@@ -1,0 +1,22 @@
+<!-- 学生上传页面 -->
+<view class="card">
+  <view>教室编号</view>
+  <input class="input" placeholder="例如 A101"
+         value="{{classroomId}}" bindinput="onClassroomInput" />
+</view>
+
+<view class="card">
+  <button class="btn-primary" bindtap="chooseImage">拍照 / 选图</button>
+  <image wx:if="{{photoPath}}" src="{{photoPath}}" mode="widthFix" class="preview" />
+</view>
+
+<view class="card">
+  <button class="btn-primary" loading="{{submitting}}"
+          disabled="{{submitting}}" bindtap="submit">提交</button>
+</view>
+
+<view wx:if="{{lastResult}}" class="card">
+  <view>判定结果：<text class="result-{{lastResult.result}}">{{lastResult.result}}</text></view>
+  <view class="muted">原因：{{lastResult.reason}}</view>
+  <view class="muted">记录ID：{{lastResult.record_id}}</view>
+</view>
