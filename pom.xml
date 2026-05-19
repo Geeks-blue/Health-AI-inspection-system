@@ -67,6 +67,15 @@
             <version>1.7.0</version>
         </dependency>
 
+        <!-- 锁定 jakarta.persistence-api 版本：Spring Boot 3.2 / Hibernate 6.4 配套
+             的是 3.1.0；如果被传递依赖升到 3.2.0 会与 Hibernate 的 SchemaManager
+             方法签名冲突，启动时 JDK 代理报 IllegalArgumentException。 -->
+        <dependency>
+            <groupId>jakarta.persistence</groupId>
+            <artifactId>jakarta.persistence-api</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
