@@ -9,5 +9,5 @@
   margin-top: 16rpx;
   border-radius: 8rpx;
 }
-.result-pass { color: #1aad19; font-weight: bold; }
-.result-review { color: #e6a23c; font-weight: bold; }
+.result-pass { color: #1890ff; font-weight: bold; }
+.result-review { color: #faad14; font-weight: bold; }

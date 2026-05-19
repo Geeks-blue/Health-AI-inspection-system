@@ -5,13 +5,13 @@
   ],
   "window": {
     "navigationBarTitleText": "教室卫生巡查",
-    "navigationBarBackgroundColor": "#1aad19",
+    "navigationBarBackgroundColor": "#1890ff",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#f7f7f7"
+    "backgroundColor": "#f0f2f5"
   },
   "tabBar": {
     "color": "#999",
-    "selectedColor": "#1aad19",
+    "selectedColor": "#1890ff",
     "list": [
       { "pagePath": "pages/upload/upload", "text": "上传" },
       { "pagePath": "pages/review/review", "text": "复核" }
