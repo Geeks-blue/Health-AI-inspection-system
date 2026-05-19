@@ -59,11 +59,12 @@
             <version>0.2.8</version>
         </dependency>
 
-        <!-- Hibernate 启动期需要的 com.fasterxml.classmate；显式声明避免某些环境
-             transitive 解析失败导致 NoClassDefFoundError -->
+        <!-- Hibernate 启动期需要的 com.fasterxml.classmate；显式声明并锁定版本，
+             避免某些环境下 BOM 解析或本地 .m2 损坏导致 NoClassDefFoundError -->
         <dependency>
             <groupId>com.fasterxml</groupId>
             <artifactId>classmate</artifactId>
+            <version>1.7.0</version>
         </dependency>
 
         <dependency>
