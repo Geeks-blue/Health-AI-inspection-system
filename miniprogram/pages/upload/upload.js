@@ -67,7 +67,12 @@ Page({
   async pickRoom(e) {
     const room = e.currentTarget.dataset.room;
     if (!room || room.isOther) return;
-    if (this.data.claimedRoom === room.id) return;
+
+    // 再点一次自己已经选中的教室 → 切换为「取消选中」（释放锁）
+    if (this.data.claimedRoom === room.id) {
+      this.releaseClaimed();
+      return;
+    }
 
     try {
       const dto = await request({
@@ -89,13 +94,14 @@ Page({
     }
   },
 
-  /** 取消已锁的教室 */
-  cancelRoom() {
+  /** 释放当前已锁的教室（供「再点一次取消」复用） */
+  releaseClaimed() {
     const id = this.data.claimedRoom;
     if (!id) return;
     request({ url: `/api/classrooms/${id}/release`, method: 'POST' })
       .then(() => {
         this.setData({ claimedRoom: null, claimedRoomName: '' });
+        wx.showToast({ title: '已取消选择', icon: 'none' });
         this.refreshRooms();
       })
       .catch(e => wx.showToast({ title: e.message || '释放失败', icon: 'none' }));

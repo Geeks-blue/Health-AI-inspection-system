@@ -15,7 +15,7 @@
       <view class="sub" wx:if="{{claimedRoom}}">已选 · {{claimedRoom}}</view>
       <view class="sub" wx:else>共 {{rooms.length}} 间</view>
     </view>
-    <view class="hint">点选一间空闲教室即可锁定上传位（5 分钟内有效），上传成功自动释放。</view>
+    <view class="hint">点选一间空闲教室即可锁定上传位（5 分钟内有效）；再点一次取消选择；上传成功自动释放。</view>
 
     <view class="room-grid">
       <view wx:for="{{rooms}}" wx:key="id"
@@ -24,7 +24,7 @@
             bindtap="pickRoom">
         <view class="room-id">{{item.id}}</view>
         <view class="room-name">{{item.name}}</view>
-        <view class="room-status" wx:if="{{item.isSelf}}">✓ 你已选中</view>
+        <view class="room-status" wx:if="{{item.isSelf}}">✓ 已选 · 再点取消</view>
         <view class="room-status" wx:elif="{{item.isOther}}">占用：{{item.lockedBy}}</view>
         <view class="room-status free" wx:else>空闲</view>
       </view>
@@ -84,7 +84,6 @@
     <text wx:else class="muted">未选择教室</text>
   </view>
   <view class="action-btns">
-    <button class="btn ghost small" wx:if="{{claimedRoom}}" bindtap="cancelRoom">取消</button>
     <button class="btn small" loading="{{submitting}}" disabled="{{submitting || !claimedRoom || !photoPath}}" bindtap="submit">
       提交
     </button>
