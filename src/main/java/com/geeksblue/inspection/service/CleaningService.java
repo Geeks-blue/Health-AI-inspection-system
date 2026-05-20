@@ -8,9 +8,14 @@ import com.geeksblue.inspection.api.CheckResponse;
 import com.geeksblue.inspection.api.ReviewItem;
 import com.geeksblue.inspection.api.StatsResponse;
 import com.geeksblue.inspection.api.StatsResponse.ClassroomStat;
+import com.geeksblue.inspection.camera.CameraSnapshotService;
+import com.geeksblue.inspection.domain.Classroom;
+import com.geeksblue.inspection.domain.ClassroomRepository;
 import com.geeksblue.inspection.domain.CleaningRecord;
 import com.geeksblue.inspection.domain.CleaningRecordRepository;
 import com.geeksblue.inspection.storage.PhotoStorage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +25,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 卫生巡查业务编排服务。
@@ -29,56 +35,117 @@ import java.util.List;
 @Service
 public class CleaningService {
 
+    private static final Logger log = LoggerFactory.getLogger(CleaningService.class);
+
     private final PhotoStorage photoStorage;
     private final AliyunVisionService visionService;
     private final CleaningRuleEngine ruleEngine;
     private final CleaningRecordRepository repository;
     private final ClassroomLockService lockService;
+    private final ClassroomRepository classroomRepository;
+    private final CameraSnapshotService cameraService;
 
     public CleaningService(PhotoStorage photoStorage,
                            AliyunVisionService visionService,
                            CleaningRuleEngine ruleEngine,
                            CleaningRecordRepository repository,
-                           ClassroomLockService lockService) {
+                           ClassroomLockService lockService,
+                           ClassroomRepository classroomRepository,
+                           CameraSnapshotService cameraService) {
         this.photoStorage = photoStorage;
         this.visionService = visionService;
         this.ruleEngine = ruleEngine;
         this.repository = repository;
         this.lockService = lockService;
+        this.classroomRepository = classroomRepository;
+        this.cameraService = cameraService;
     }
 
     /**
-     * 学生上传图片后的核心入口：落盘 + AI + 规则 + 存库。
+     * 学生上传图片后的核心入口：
+     * <ol>
+     *   <li>学生图片落盘</li>
+     *   <li>同步抓取教室监控快照（若该教室配置了 cameraUrl）</li>
+     *   <li>两张图都跑 AI；结果合并（任一发现垃圾 → 转复核）</li>
+     *   <li>规则判定 + 入库 + 释放教室占用锁</li>
+     * </ol>
+     * 监控不可用时整个流程不阻塞，只在 ai_detail 里追加 camera_unavailable 标记。
      */
     @Transactional
     public CheckResponse check(MultipartFile photo, String classroomId, String uploaderId) throws IOException {
-        // 1) 图片落盘
-        Path saved = photoStorage.save(photo);
-        // 2) 调用阿里云 AI 做目标检测
-        DetectionResult detection = visionService.detect(saved);
-        // 3) 规则引擎给出 pass / review
-        Judgement judgement = ruleEngine.judge(detection);
+        // 1) 学生上传的图片落盘
+        Path studentPhoto = photoStorage.save(photo);
 
-        // 4) 写入数据库
+        // 2) 并行视角：从监控抓一帧（如果有配置）。失败时 cameraPath=null
+        Path cameraPhoto = tryCaptureCameraSnapshot(classroomId);
+        boolean cameraTried = false;
+        boolean cameraOk = cameraPhoto != null;
+        Classroom room = classroomRepository.findById(classroomId).orElse(null);
+        if (room != null && room.getCameraUrl() != null && !room.getCameraUrl().isBlank()) {
+            cameraTried = true;
+        }
+
+        // 3) 两张图都跑 AI；学生图为主，监控图为辅
+        DetectionResult detection = visionService.detect(studentPhoto);
+        if (cameraOk) {
+            DetectionResult cameraDetection = visionService.detect(cameraPhoto);
+            detection.mergeFrom(cameraDetection);
+        }
+
+        // 4) 规则引擎给出 pass / review
+        Judgement judgement = ruleEngine.judge(detection);
+        String reason = judgement.reason();
+        if (cameraTried && !cameraOk) {
+            // 监控应该可用但抓帧失败：在原因里标注一下，但不影响判定
+            reason = reason + ", camera_unavailable";
+        }
+
+        // 5) 写入数据库
         CleaningRecord record = new CleaningRecord();
         record.setClassroomId(classroomId);
         record.setUploaderId(uploaderId);
-        record.setPhotoPath(saved.toString());
+        record.setPhotoPath(studentPhoto.toString());
+        if (cameraOk) {
+            record.setCameraPhotoPath(cameraPhoto.toString());
+        }
         record.setAiResult(judgement.result());
-        record.setAiDetail(judgement.reason());
+        record.setAiDetail(reason);
         record.setCreatedAt(LocalDateTime.now());
-        // AI 直接合格的，最终结果直接写 pass，不需要老师介入
         if (CleaningRuleEngine.PASS.equals(judgement.result())) {
             record.setFinalResult("pass");
             record.setReviewedAt(record.getCreatedAt());
         }
         record = repository.save(record);
 
-        // 6) 上传成功，立即释放该教室的占用锁（如果是自己持有），让别人可以接着选
+        // 6) 释放占用锁，让别人立刻可以选这间教室
         lockService.release(classroomId, uploaderId);
 
-        // 7) 返回给小程序
-        return new CheckResponse(judgement.result(), judgement.reason(), String.valueOf(record.getId()));
+        // 7) 返回给前端
+        return new CheckResponse(judgement.result(), reason, String.valueOf(record.getId()));
+    }
+
+    /**
+     * 抓取教室监控快照，落盘到 photoStorage.root()/camera/YYYY/MM/DD/uuid.jpg。
+     * 教室无 cameraUrl 或抓帧失败时返回 null（由调用方决定如何处理）。
+     */
+    private Path tryCaptureCameraSnapshot(String classroomId) {
+        Classroom room = classroomRepository.findById(classroomId).orElse(null);
+        if (room == null || room.getCameraUrl() == null || room.getCameraUrl().isBlank()) {
+            return null;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        Path target = photoStorage.root()
+                .resolve("camera")
+                .resolve(String.format("%04d", now.getYear()))
+                .resolve(String.format("%02d", now.getMonthValue()))
+                .resolve(String.format("%02d", now.getDayOfMonth()))
+                .resolve(UUID.randomUUID() + ".jpg");
+        boolean ok = cameraService.snapshot(room.getCameraUrl(), target);
+        if (!ok) {
+            log.warn("教室 {} 监控抓帧失败或未配置", classroomId);
+            return null;
+        }
+        return target;
     }
 
     /** 老师查看待复核列表 */

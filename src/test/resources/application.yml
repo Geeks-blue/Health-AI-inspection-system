@@ -18,6 +18,7 @@ spring:
 cleaning:
   storage-root: ./build/test-uploads
   retention-days: 7
+  camera-mock: true
 
 aliyun:
   access-key-id: ""

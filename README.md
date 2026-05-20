@@ -4,9 +4,9 @@
 
 ## 一、系统架构
 
-- 小程序只负责拍照上传
-- Java 后端负责鉴权 + 调用 AI
-- AI 输出 `pass`（合格）或 `review`（待复核）
+- 小程序拍照上传 + 选教室
+- Java 后端鉴权 + 同步抓取该教室监控快照 + 调用 AI
+- AI 对**学生照片**和**监控快照**两路检测，结果合并：任一发现垃圾 → `review`，否则 `pass`
 - 老师只处理 `review` 的记录
 - 图片在本地磁盘保留 7 天，到期自动清理（数据库记录保留，便于统计）
 
@@ -15,12 +15,14 @@
 | 路径 | 作用 |
 |------|------|
 | `web/CleaningController` | REST 接口 |
-| `service/CleaningService` | 业务编排 |
+| `service/CleaningService` | 业务编排：学生图落盘 → 抓监控 → 双路 AI → 规则判定 |
+| `camera/CameraSnapshotService` | 教室监控 HTTP snapshot 抓拍（可 mock） |
 | `ai/AliyunVisionService` | 阿里云目标检测调用（可 mock） |
 | `ai/CleaningRuleEngine` | 宽松版的合格/复核判定规则 |
-| `storage/PhotoStorage` | 图片落盘到 `data/cleaning/YYYY/MM/DD/uuid.jpg` |
-| `storage/PhotoCleanupJob` | 每日 03:00 定时清理 7 天前的图片 |
-| `domain/CleaningRecord` | 卫生巡查记录的 JPA 实体 |
+| `storage/PhotoStorage` | 学生图落盘到 `data/cleaning/YYYY/MM/DD/uuid.jpg`；监控图落到 `data/cleaning/camera/YYYY/MM/DD/uuid.jpg` |
+| `storage/PhotoCleanupJob` | 每日 03:00 定时清理 7 天前的图片（含监控） |
+| `domain/CleaningRecord` | 卫生巡查记录的 JPA 实体（含 `cameraPhotoPath` 字段） |
+| `domain/Classroom` | 教室元数据（含 `cameraUrl` 摄像头快照地址） |
 
 ## 三、接口设计
 

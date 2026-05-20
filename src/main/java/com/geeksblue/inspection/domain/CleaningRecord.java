@@ -35,6 +35,10 @@ public class CleaningRecord {
     @Column(name = "photo_path", length = 512)
     private String photoPath;
 
+    /** 同步抓拍的监控快照路径；监控不可用时为空 */
+    @Column(name = "camera_photo_path", length = 512)
+    private String cameraPhotoPath;
+
     /** AI 判定结果：pass / review */
     @Column(name = "ai_result", nullable = false, length = 16)
     private String aiResult;
@@ -72,6 +76,9 @@ public class CleaningRecord {
 
     public String getPhotoPath() { return photoPath; }
     public void setPhotoPath(String photoPath) { this.photoPath = photoPath; }
+
+    public String getCameraPhotoPath() { return cameraPhotoPath; }
+    public void setCameraPhotoPath(String cameraPhotoPath) { this.cameraPhotoPath = cameraPhotoPath; }
 
     public String getAiResult() { return aiResult; }
     public void setAiResult(String aiResult) { this.aiResult = aiResult; }

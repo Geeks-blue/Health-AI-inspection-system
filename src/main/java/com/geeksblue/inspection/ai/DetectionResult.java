@@ -27,4 +27,18 @@ public class DetectionResult {
     public List<String> getDeskTrash() { return deskTrash; }
     public List<String> getPodiumPiles() { return podiumPiles; }
     public List<String> getBinOverflow() { return binOverflow; }
+
+    /**
+     * 把另一份检测结果并入当前对象（取并集）。
+     * 用于把「学生拍的」和「监控抓的」两次 AI 结果合并到一起再交给规则引擎判定。
+     *
+     * @param other 另一份检测结果；null 直接忽略
+     */
+    public void mergeFrom(DetectionResult other) {
+        if (other == null) return;
+        this.floorBigTrash.addAll(other.floorBigTrash);
+        this.deskTrash.addAll(other.deskTrash);
+        this.podiumPiles.addAll(other.podiumPiles);
+        this.binOverflow.addAll(other.binOverflow);
+    }
 }

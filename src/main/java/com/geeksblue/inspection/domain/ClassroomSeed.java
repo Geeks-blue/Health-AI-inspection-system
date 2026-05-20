@@ -27,13 +27,14 @@ public class ClassroomSeed {
         if (repository.count() > 0) {
             return;
         }
+        // cameraUrl 为占位演示值；生产替换为真实摄像头 snapshot URL，或后台维护
         List<Classroom> seeds = List.of(
-                new Classroom("A101", "A 楼 101"),
-                new Classroom("A102", "A 楼 102"),
-                new Classroom("A103", "A 楼 103"),
-                new Classroom("B201", "B 楼 201"),
-                new Classroom("B202", "B 楼 202"),
-                new Classroom("C301", "C 楼 301")
+                new Classroom("A101", "A 楼 101", "http://camera.example.com/A101/snapshot.jpg"),
+                new Classroom("A102", "A 楼 102", "http://camera.example.com/A102/snapshot.jpg"),
+                new Classroom("A103", "A 楼 103", null),
+                new Classroom("B201", "B 楼 201", "http://camera.example.com/B201/snapshot.jpg"),
+                new Classroom("B202", "B 楼 202", "http://camera.example.com/B202/snapshot.jpg"),
+                new Classroom("C301", "C 楼 301", null)
         );
         repository.saveAll(seeds);
         log.info("种入演示教室共 {} 间", seeds.size());
