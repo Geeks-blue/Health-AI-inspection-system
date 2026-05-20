@@ -74,6 +74,8 @@ Page({
       return;
     }
 
+    // 一次只能选一间：先抢新的，成功后再释放旧的，避免抢失败时把旧的也丢了
+    const prev = this.data.claimedRoom;
     try {
       const dto = await request({
         url: `/api/classrooms/${room.id}/claim`,
@@ -83,6 +85,10 @@ Page({
         claimedRoom: dto.id,
         claimedRoomName: dto.name || dto.id
       });
+      if (prev && prev !== dto.id) {
+        // 静默释放旧教室；失败不打扰用户，TTL 兜底
+        request({ url: `/api/classrooms/${prev}/release`, method: 'POST' }).catch(() => {});
+      }
       this.refreshRooms();
     } catch (e) {
       if (e.statusCode === 409) {
