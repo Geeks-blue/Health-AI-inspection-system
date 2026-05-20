@@ -1,0 +1,15 @@
+{
+  "description": "教室卫生 AI 智能巡查小程序",
+  "appid": "touristappid",
+  "projectname": "health-ai-inspection-miniprogram",
+  "miniprogramRoot": "./",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.4.0"
+}

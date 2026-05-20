@@ -1,0 +1,10 @@
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+}
+.info-row + .info-row { border-top: 1rpx solid var(--c-border); }
+.info-label { font-size: 28rpx; color: var(--c-text); }
+.info-label.danger { color: var(--c-danger); }
+.info-value { font-size: 26rpx; color: var(--c-muted); }

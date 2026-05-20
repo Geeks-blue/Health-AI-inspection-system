@@ -1,0 +1,31 @@
+<view class="page">
+  <view class="user-bar">
+    <view class="avatar">{{initial}}</view>
+    <view class="meta">
+      <view class="name">{{user.id}}</view>
+      <view class="role">{{roleLabel}}</view>
+    </view>
+  </view>
+
+  <view class="section card">
+    <view class="info-row">
+      <text class="info-label">用户 ID</text>
+      <text class="info-value">{{user.id}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">身份</text>
+      <text class="info-value">{{roleLabel}}</text>
+    </view>
+  </view>
+
+  <view class="section card">
+    <view class="info-row" bindtap="logout">
+      <text class="info-label danger">退出登录</text>
+      <text class="info-value muted">›</text>
+    </view>
+  </view>
+
+  <view class="hint" style="text-align:center;margin-top:48rpx;">
+    教室卫生 AI 巡查 · v0.1
+  </view>
+</view>

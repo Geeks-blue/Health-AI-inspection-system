@@ -1,0 +1,48 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: health-ai-inspection-system
+  servlet:
+    multipart:
+      # 单张教室照片最大 10MB
+      max-file-size: 10MB
+      max-request-size: 10MB
+  datasource:
+    # 默认使用文件 H2，方便本地开发；生产请替换为 MySQL
+    url: jdbc:h2:file:./data/h2db;AUTO_SERVER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      # 表结构自动同步实体类
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+cleaning:
+  # 上传图片落盘根目录
+  storage-root: ./data/cleaning
+  # 图片保留天数（数据库记录始终保留）
+  retention-days: 7
+  # 教室占用锁 TTL（秒）；选了不上传不会永久占用
+  classroom-lock-ttl-seconds: 300
+  # 监控抓拍：camera-mock=true 时不真实联网，落一张占位 JPEG（开发/测试用）
+  camera-mock: true
+  camera-connect-timeout-ms: 3000
+  camera-read-timeout-ms: 5000
+
+aliyun:
+  # 阿里云 AccessKey，建议通过环境变量注入
+  access-key-id: ${ALIYUN_ACCESS_KEY_ID:}
+  access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:}
+  # 视觉智能 API 接入点
+  imagerecog-endpoint: imagerecog.cn-shanghai.aliyuncs.com
+  # mock=true 时跳过真实 AI 调用，返回空检测结果（开发/测试用）
+  mock: true

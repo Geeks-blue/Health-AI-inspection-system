@@ -1,0 +1,29 @@
+<view class="login">
+  <view class="hero">
+    <view class="logo">🧹</view>
+    <view class="title">教室卫生 AI 巡查</view>
+    <view class="subtitle">拍照即判定，老师只看待复核</view>
+  </view>
+
+  <view class="card">
+    <view class="label">选择身份</view>
+    <view class="role-grid">
+      <view wx:for="{{roles}}" wx:key="key"
+            class="role-card {{role === item.key ? 'role-active' : ''}}"
+            data-key="{{item.key}}" bindtap="pickRole">
+        <view class="role-icon">{{item.icon}}</view>
+        <view class="role-name">{{item.label}}</view>
+        <view class="role-desc">{{item.desc}}</view>
+      </view>
+    </view>
+
+    <view class="label" style="margin-top: 32rpx;">用户 ID</view>
+    <input class="input" placeholder="例如 stu-001 / teacher-007"
+           value="{{userId}}" bindinput="onUserIdInput" />
+
+    <button class="btn block" style="margin-top: 32rpx;" bindtap="submit">进入系统</button>
+    <view class="hint" style="text-align: center; margin-top: 16rpx;">
+      演示版登录，生产环境替换为 wx.login + jscode2session
+    </view>
+  </view>
+</view>

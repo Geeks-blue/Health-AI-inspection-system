@@ -1,0 +1,45 @@
+<view class="page">
+  <!-- 顶部数量条 -->
+  <view class="header card">
+    <view class="counter">
+      <view class="num">{{items.length}}</view>
+      <view class="label">条待复核</view>
+    </view>
+    <view class="hint" style="text-align:right;flex:1;">
+      下拉可手动刷新列表
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{!loading && items.length === 0}}" class="empty card">
+    <view class="icon">🎉</view>
+    <view class="text">暂无待复核记录</view>
+  </view>
+
+  <!-- 卡片列表 -->
+  <block wx:for="{{items}}" wx:key="recordId">
+    <view class="review-item card">
+      <view class="row top">
+        <view class="room-tag">{{item.classroomId}}</view>
+        <view class="meta">
+          <view class="uploader">上传人：{{item.uploaderId}}</view>
+          <view class="time">{{item.createdAt}}</view>
+        </view>
+      </view>
+
+      <view class="reason">
+        <view class="reason-label">AI 判定</view>
+        <view class="reason-text">{{item.aiDetail || '—'}}</view>
+      </view>
+
+      <view class="btn-row">
+        <button class="btn ghost" data-id="{{item.recordId}}" data-result="fail" bindtap="submit">
+          不通过
+        </button>
+        <button class="btn" data-id="{{item.recordId}}" data-result="pass" bindtap="submit">
+          通过
+        </button>
+      </view>
+    </view>
+  </block>
+</view>
